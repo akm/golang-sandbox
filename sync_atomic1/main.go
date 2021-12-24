@@ -7,23 +7,27 @@ import (
 )
 
 func main() {
-	cnt := useAtomicAddUint32()
-	fmt.Printf("useAtomicAddUint32: %d\n", cnt)
+	countUp := NewAtomicCountup()
+	countUp.Do()
+	fmt.Printf("AtomicCountup: %d\n", countUp.Count)
 }
 
-func useAtomicAddUint32() uint32 {
-	var cnt uint32
-	var wg sync.WaitGroup
+type AtomicCountup struct {
+	Count uint32
+	wg    sync.WaitGroup
+}
 
+func NewAtomicCountup() *AtomicCountup {
+	return &AtomicCountup{}
+}
+
+func (c *AtomicCountup) Do() {
 	for i := 0; i < 10000; i++ {
-		wg.Add(1)
+		c.wg.Add(1)
 		go func() {
-			atomic.AddUint32(&cnt, 1)
-			defer wg.Done()
+			atomic.AddUint32(&c.Count, 1)
+			defer c.wg.Done()
 		}()
 	}
-
-	wg.Wait()
-
-	return cnt
+	c.wg.Wait()
 }
