@@ -4,17 +4,19 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
+	"time"
 )
 
 func main() {
 	countUp := NewAtomicCountup()
 	countUp.Do()
-	fmt.Printf("AtomicCountup: %d\n", countUp.Count)
+	fmt.Printf("AtomicCountup done\n")
 }
 
 type AtomicCountup struct {
-	Count uint32
-	wg    sync.WaitGroup
+	Waiting int64
+	Working int64
+	wg      sync.WaitGroup
 }
 
 func NewAtomicCountup() *AtomicCountup {
@@ -22,12 +24,19 @@ func NewAtomicCountup() *AtomicCountup {
 }
 
 func (c *AtomicCountup) Do() {
-	for i := 0; i < 10000; i++ {
+	for i := 0; i < 1000; i++ {
 		c.wg.Add(1)
+		atomic.AddInt64(&c.Waiting, 1)
 		go func() {
-			atomic.AddUint32(&c.Count, 1)
-			defer c.wg.Done()
+			defer func() {
+				c.wg.Done()
+				atomic.AddInt64(&c.Working, -1)
+			}()
+			atomic.AddInt64(&c.Waiting, -1)
+			atomic.AddInt64(&c.Working, 1)
+			time.Sleep(5000 * time.Millisecond)
 		}()
+		time.Sleep(10 * time.Millisecond)
 	}
 	c.wg.Wait()
 }
