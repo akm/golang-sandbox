@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -9,8 +10,26 @@ import (
 
 func main() {
 	countUp := NewAtomicCountup()
+	ctx, cancel := context.WithCancel(context.Background())
+	go watch(ctx, countUp)
 	countUp.Do()
+	cancel()
 	fmt.Printf("AtomicCountup done\n")
+}
+
+func watch(ctx context.Context, countUp *AtomicCountup) {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		waiting, working := countUp.Stat()
+		fmt.Printf("waiting: %d, working: %d\n", waiting, working)
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+			// continue
+		}
+	}
 }
 
 type AtomicCountup struct {
@@ -39,4 +58,8 @@ func (c *AtomicCountup) Do() {
 		time.Sleep(10 * time.Millisecond)
 	}
 	c.wg.Wait()
+}
+
+func (c *AtomicCountup) Stat() (int64, int64) {
+	return atomic.LoadInt64(&c.Waiting), atomic.LoadInt64(&c.Working)
 }
