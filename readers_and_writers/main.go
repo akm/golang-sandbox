@@ -14,22 +14,22 @@ func main() {
 	r, w := io.Pipe()
 
 	go func() {
-		for i := 0; i < 3; i++ {
-			fmt.Fprintf(w, "%s\n", longBytes)
-			time.Sleep(time.Second)
+		fmt.Printf("before io.Copy()\n")
+		buf := make([]byte, 1024)
+		if _, err := io.CopyBuffer(os.Stdout, r, buf); err != nil {
+			fmt.Printf("error  io.Copy(): %+v\n", err)
+			os.Exit(1)
 		}
-		fmt.Printf("before w.Close()\n")
-		w.Close()
-		fmt.Printf("after  w.Close()\n")
+		fmt.Printf("after  io.Copy()\n")
 	}()
 
-	fmt.Printf("before io.Copy()\n")
-	buf := make([]byte, 1024)
-	if _, err := io.CopyBuffer(os.Stdout, r, buf); err != nil {
-		fmt.Printf("error  io.Copy(): %+v\n", err)
-		os.Exit(1)
+	for i := 0; i < 3; i++ {
+		fmt.Fprintf(w, "%s\n", longBytes)
+		time.Sleep(time.Second)
 	}
-	fmt.Printf("after  io.Copy()\n")
+	fmt.Printf("before w.Close()\n")
+	w.Close()
+	fmt.Printf("after  w.Close()\n")
 
 	// Result:
 	// $ go run .
@@ -39,7 +39,6 @@ func main() {
 	// 0123456789abcdef0123456789abcdef...
 	// before w.Close()
 	// after  w.Close()
-	// after  io.Copy()
 }
 
 func multipleBytes(base []byte, times int) []byte {
