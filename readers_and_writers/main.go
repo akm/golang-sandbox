@@ -33,7 +33,10 @@ func main() {
 		time.Sleep(time.Second)
 	}
 	fmt.Printf("before w.Close()\n")
-	w.Close()
+	if err := w.Close(); err != nil {
+		fmt.Printf("error  w.Close(): %+v\n", err)
+		os.Exit(1)
+	}
 	fmt.Printf("after  w.Close()\n")
 
 	wg.Wait()
