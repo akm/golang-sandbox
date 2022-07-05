@@ -15,12 +15,12 @@ func main() {
 
 	go func() {
 		fmt.Printf("before io.Copy()\n")
+		defer fmt.Printf("after  io.Copy()\n")
 		buf := make([]byte, 1024)
 		if _, err := io.CopyBuffer(os.Stdout, r, buf); err != nil {
 			fmt.Printf("error  io.Copy(): %+v\n", err)
 			os.Exit(1)
 		}
-		fmt.Printf("after  io.Copy()\n")
 	}()
 
 	for i := 0; i < 3; i++ {
