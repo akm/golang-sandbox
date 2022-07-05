@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -67,7 +68,7 @@ func process(srcPath, destUrl string) error {
 
 		_, err := cli.PutObject(ctx, &s3.PutObjectInput{
 			Bucket:      aws.String(dest.Host),
-			Key:         aws.String(dest.Path),
+			Key:         aws.String(strings.TrimPrefix(dest.Path, "/")),
 			ContentType: aws.String(contentType),
 			Body:        reader,
 		})
