@@ -8,13 +8,26 @@ import (
 	"time"
 )
 
+type WaitGroupWriter struct {
+	io.WriteCloser
+	wg *sync.WaitGroup
+}
+
+func (w *WaitGroupWriter) Close() error {
+	if err := w.WriteCloser.Close(); err != nil {
+		return err
+	}
+	w.wg.Wait()
+	return nil
+}
+
 func main() {
 	longBytes := multipleBytes([]byte("0123456789abcdef"), 65) // バッファサイズよりちょっとだけ大きいデータ
 	// fmt.Printf("%s\n", longBytes)
 
-	r, w := io.Pipe()
-
+	r, pw := io.Pipe()
 	wg := &sync.WaitGroup{}
+	w := &WaitGroupWriter{WriteCloser: pw, wg: wg}
 
 	wg.Add(1)
 	go func() {
@@ -38,8 +51,6 @@ func main() {
 		os.Exit(1)
 	}
 	fmt.Printf("after  w.Close()\n")
-
-	wg.Wait()
 
 	// Result:
 	// $ go run .
