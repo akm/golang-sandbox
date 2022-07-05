@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -26,13 +27,17 @@ func main() {
 }
 
 func process(srcPath, destUrl string) error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Minute)
+	log.Printf("Uploading %q to %q\n", srcPath, destUrl)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 	defer cancel()
 
 	cfg, err := newConfig(ctx)
 	if err != nil {
 		return err
 	}
+
+	log.Printf("cfg: %#v\n", *cfg)
 
 	srcFile := NewLocalFile(srcPath)
 	defer srcFile.TearDown()
@@ -42,10 +47,14 @@ func process(srcPath, destUrl string) error {
 		return err
 	}
 
+	log.Printf("contentType: %q\n", contentType)
+
 	dest, err := url.Parse(destUrl)
 	if err != nil {
 		return errors.Wrapf(err, "failed to parse dest url: %q", destUrl)
 	}
+
+	log.Printf("dest: %#v\n", *dest)
 
 	reader, err := srcFile.Reader()
 	if err != nil {
@@ -54,6 +63,8 @@ func process(srcPath, destUrl string) error {
 
 	{
 		cli := s3.NewFromConfig(*cfg)
+		log.Printf("cli: %#v\n", *cli)
+
 		_, err := cli.PutObject(ctx, &s3.PutObjectInput{
 			Bucket:      aws.String(dest.Host),
 			Key:         aws.String(dest.Path),
@@ -64,6 +75,8 @@ func process(srcPath, destUrl string) error {
 			return errors.Wrapf(err, "failed to create multipart upload")
 		}
 	}
+
+	log.Printf("Uploading done\n")
 
 	return nil
 }
