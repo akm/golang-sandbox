@@ -8,8 +8,6 @@ import (
 )
 
 func main() {
-	// bufio.NewWriter のデフォルトのバッファサイズは 4096 bytes
-	// https://cs.opensource.google/go/go/+/refs/tags/go1.18.3:src/bufio/bufio.go;drc=ceda93ed673294f0ce5eb3a723d563091bff0a39;l=19
 	longBytes := multipleBytes([]byte("0123456789abcdef"), 65) // バッファサイズよりちょっとだけ大きいデータ
 	// fmt.Printf("%s\n", longBytes)
 
@@ -33,6 +31,15 @@ func main() {
 	}
 	fmt.Printf("after  io.Copy()\n")
 
+	// Result:
+	// $ go run .
+	// before io.Copy()
+	// 0123456789abcdef0123456789abcdef...
+	// 0123456789abcdef0123456789abcdef...
+	// 0123456789abcdef0123456789abcdef...
+	// before w.Close()
+	// after  w.Close()
+	// after  io.Copy()
 }
 
 func multipleBytes(base []byte, times int) []byte {
