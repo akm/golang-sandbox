@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -13,6 +14,9 @@ func main() {
 
 	r, w := io.Pipe()
 
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
 	go func() {
 		fmt.Printf("before io.Copy()\n")
 		defer fmt.Printf("after  io.Copy()\n")
@@ -21,6 +25,7 @@ func main() {
 			fmt.Printf("error  io.Copy(): %+v\n", err)
 			os.Exit(1)
 		}
+		wg.Done()
 	}()
 
 	for i := 0; i < 3; i++ {
@@ -31,6 +36,8 @@ func main() {
 	w.Close()
 	fmt.Printf("after  w.Close()\n")
 
+	wg.Wait()
+
 	// Result:
 	// $ go run .
 	// before io.Copy()
@@ -39,6 +46,7 @@ func main() {
 	// 0123456789abcdef0123456789abcdef...
 	// before w.Close()
 	// after  w.Close()
+	// after  io.Copy()
 }
 
 func multipleBytes(base []byte, times int) []byte {
