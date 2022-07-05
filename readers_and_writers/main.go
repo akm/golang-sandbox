@@ -10,14 +10,20 @@ import (
 
 type WaitGroupWriter struct {
 	io.WriteCloser
-	wg *sync.WaitGroup
+	*sync.WaitGroup
+}
+
+func NewWaitGroupWriter(w io.WriteCloser) *WaitGroupWriter {
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	return &WaitGroupWriter{WriteCloser: w, WaitGroup: wg}
 }
 
 func (w *WaitGroupWriter) Close() error {
 	if err := w.WriteCloser.Close(); err != nil {
 		return err
 	}
-	w.wg.Wait()
+	w.WaitGroup.Wait()
 	return nil
 }
 
@@ -26,10 +32,8 @@ func main() {
 	// fmt.Printf("%s\n", longBytes)
 
 	r, pw := io.Pipe()
-	wg := &sync.WaitGroup{}
-	w := &WaitGroupWriter{WriteCloser: pw, wg: wg}
+	w := NewWaitGroupWriter(pw)
 
-	wg.Add(1)
 	go func() {
 		fmt.Printf("before io.Copy()\n")
 		defer fmt.Printf("after  io.Copy()\n")
@@ -38,7 +42,7 @@ func main() {
 			fmt.Printf("error  io.Copy(): %+v\n", err)
 			os.Exit(1)
 		}
-		wg.Done()
+		w.Done()
 	}()
 
 	for i := 0; i < 3; i++ {
