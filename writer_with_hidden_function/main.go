@@ -1,40 +1,43 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"os"
-	"sync"
 	"time"
+
+	"golang.org/x/sync/errgroup"
 )
 
 type WaitGroupWriter struct {
 	io.WriteCloser
-	*sync.WaitGroup
+	*errgroup.Group
+	Context context.Context
 }
 
-func NewWaitGroupWriter(w io.WriteCloser) *WaitGroupWriter {
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	return &WaitGroupWriter{WriteCloser: w, WaitGroup: wg}
+func NewWaitGroupWriter(ctx context.Context, w io.WriteCloser) *WaitGroupWriter {
+	wg, newCtx := errgroup.WithContext(ctx)
+	return &WaitGroupWriter{WriteCloser: w, Group: wg, Context: newCtx}
 }
 
 func (w *WaitGroupWriter) Close() error {
 	if err := w.WriteCloser.Close(); err != nil {
 		return err
 	}
-	w.WaitGroup.Wait()
-	return nil
+	return w.Group.Wait()
 }
 
 func main() {
+	ctx := context.Background()
+
 	longBytes := multipleBytes([]byte("0123456789abcdef"), 65) // バッファサイズよりちょっとだけ大きいデータ
 	// fmt.Printf("%s\n", longBytes)
 
 	r, pw := io.Pipe()
-	w := NewWaitGroupWriter(pw)
+	w := NewWaitGroupWriter(ctx, pw)
 
-	go func() {
+	w.Go(func() error {
 		fmt.Printf("before io.Copy()\n")
 		defer fmt.Printf("after  io.Copy()\n")
 		buf := make([]byte, 1024)
@@ -42,8 +45,8 @@ func main() {
 			fmt.Printf("error  io.Copy(): %+v\n", err)
 			os.Exit(1)
 		}
-		w.Done()
-	}()
+		return nil
+	})
 
 	for i := 0; i < 3; i++ {
 		fmt.Fprintf(w, "%s\n", longBytes)
